@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './utils/supabase'
 import { fetchPosts, createPost, updatePost, deletePost } from './api/postsApi'
 import './App.css'
+import AuthForm from './components/AuthForm'
 
 
 export default function App() {
@@ -13,7 +14,22 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const user = session?.user ?? null;
+
+  const getAccessToken = () => session?.access_token ?? null;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchPostsData = useCallback(async () => {
     setLoading(true);
@@ -38,14 +54,22 @@ export default function App() {
     setError(null);
     setSuccessMessage('');
 
+    const accessToken = getAccessToken();
+
+    if (!accessToken) {
+      setError('You must be logged in to create or edit posts');
+      setSubmitting(false);
+      return;
+    }
+
     const postData = { title, content };
 
     try {
       if (editingPostId) {
-        await updatePost(editingPostId, postData);
+        await updatePost(editingPostId, postData, accessToken);
         setSuccessMessage('Post updated successfully');
       } else {
-        await createPost(postData);
+        await createPost(postData, accessToken, user.email);
         setSuccessMessage('Post created successfully');
       }
       setTitle('');
@@ -54,7 +78,7 @@ export default function App() {
       fetchPostsData();
     } catch (error) {
       console.error('Error submitting post:', error);
-      setError('Failed to submit post');
+      setError(error.message || 'Failed to submit post');
     } finally {
       setSubmitting(false);
     }
@@ -69,36 +93,49 @@ export default function App() {
   const handleDelete = async (postId) => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
 
+    const accessToken = getAccessToken();
+
+    if (!accessToken) {
+      setError('You must be logged in to delete posts');
+      return;
+    }
+
     try {
-      await deletePost(postId);
+      await deletePost(postId, accessToken);
       setSuccessMessage('Post deleted successfully');
       fetchPostsData();
     } catch (error) {
       console.error('Error deleting post:', error);
-      setError('Failed to delete post');
+      setError(error.message || 'Failed to delete post');
     }
-  };  
+  };
 
 
 
   return (
     <div className="container">
       <h1>My Blog</h1>
+      <AuthForm session={session} setSession={setSession} />
+      {!user && (
+        <p style={{ textAlign: 'center', color: '#718096', marginBottom: '20px' }}>
+          Please log in to create, edit, or delete posts.
+        </p>
+      )}
       <form onSubmit={handleSubmit}>
         <input
           type="text"
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          disabled={submitting}
+          disabled={submitting || !user}
         />
         <textarea
           placeholder="Content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          disabled={submitting}
+          disabled={submitting || !user}
         />
-        <button type="submit" disabled={submitting}>
+        <button type="submit" disabled={submitting || !user}>
           {editingPostId ? 'Update Post' : 'Create Post'}
         </button>
       </form>
@@ -112,8 +149,17 @@ export default function App() {
             <div key={post.id}>
               <h2>{post.title}</h2>
               <p>{post.content}</p>
-              <button onClick={() => handleEdit(post)}>Edit</button>
-              <button onClick={() => handleDelete(post.id)}>Delete</button>
+              {post.author_email && (
+                <p style={{ fontSize: '12px', color: '#718096' }}>
+                  By {post.author_email}
+                </p>
+              )}
+              {user && (
+                <>
+                  <button onClick={() => handleEdit(post)}>Edit</button>
+                  <button onClick={() => handleDelete(post.id)}>Delete</button>
+                </>
+              )}
             </div>
           ))}
         </div>
