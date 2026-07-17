@@ -1,16 +1,40 @@
-# React + Vite
+# Blog
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación de blog construida con React + Vite y Supabase.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js >= 18
 
-## React Compiler
+## Instalación
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+cd blog/blog
+npm install
+```
 
-## Expanding the Oxlint configuration
+## Variables de entorno
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Crea un archivo `.env` en `blog/blog/` con tus credenciales de Supabase:
+
+```env
+VITE_SUPABASE_URL=tu_url
+VITE_SUPABASE_PUBLISHABLE_KEY=tu_key
+```
+
+## Scripts
+
+```bash
+npm run dev      # Inicia el servidor de desarrollo
+npm run build    # Construye para producción
+npm run preview  # Previsualiza la build de producción
+npm run lint     # Ejecuta el linter
+```
+
+## Uso
+
+1. Crea un proyecto en [Supabase](https://supabase.com/)
+2. Crea una tabla `posts` con al menos las columnas `id`, `title`, `content`
+3. Configura las políticas de RLS según tus necesidades
+4. Copia la URL y la clave publishable en `.env`
+5. Ejecuta `npm run dev`
